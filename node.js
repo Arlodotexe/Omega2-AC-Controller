@@ -1,5 +1,5 @@
 'use strict';
-const pwmExp = require('/usr/bin/node-pwm-exp');
+
 const requestify = require('requestify');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -7,9 +7,11 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 const port = 8084;
+let fs = require("fs");
 let currentState;
-let oscStatus = false;
-pwmExp.driverInit();
+
+
+var exec = require('child_process').exec;
 
 function debounce(func, wait, immediate) {
     var timeout;
@@ -26,10 +28,11 @@ function debounce(func, wait, immediate) {
     };
 };
 
-(function getState() {
+function getState() {
     currentState = require('./state.json').state;
     return currentState;
-})();
+};
+getState();
 
 let sys = {
     error: function(message) {
@@ -51,14 +54,6 @@ let sys = {
     }
 }
 
-if (pwmExp.checkInit()) {
-    'use strict';
-    pwmExp.setFrequency(50);
-    sys.log('Oscillator sucessfully initialized');
-    oscStatus = true;
-} else {
-    sys.error('Error with oscillator initializing');
-}
 
 function parseForPWM(int) {
     return (100 - int) * 0.13;
@@ -101,6 +96,7 @@ app.get('/status', (req, res) => {
     })
 });
 
+
 app.post('/', function(req, res) {
     'use strict';
     let body = req.body;
@@ -112,19 +108,19 @@ app.post('/', function(req, res) {
             sys.log('Setting to ' + body.set);
             switch (body.set) {
                 case 'lowfan':
-                    pwmExp.setupDriver(0, parseForPWM(25), 0);
+                    exec("pwm-exp -f 50 0 " + parseForPWM(25));
                     break;
                 case 'highfan':
-                    pwmExp.setupDriver(0, parseForPWM(5), 0);
+                    exec("pwm-exp -f 50 0 " + parseForPWM(5));
                     break;
                 case 'highcool':
-                    pwmExp.setupDriver(0, parseForPWM(77), 0);
+                    exec("pwm-exp -f 50 0 " + parseForPWM(77));
                     break;
                 case 'lowcool':
-                    pwmExp.setupDriver(0, parseForPWM(64), 0);
+                    exec("pwm-exp -f 50 0 " + parseForPWM(64));
                     break;
                 case 'off':
-                    pwmExp.setupDriver(0, parseForPWM(43), 0);
+                    exec("pwm-exp -f 50 0 " + parseForPWM(43));
                     break;
                 default:
                     if (!isNaN(body.set)) {
@@ -141,5 +137,5 @@ app.listen(port, function(err) {
     'use strict';
     if (err) sys.error(err);
     sys.log('Listening on port ' + port);
-    if (oscStatus) sys.speak('AC Controller is ready');
+    sys.speak('AC Controller is ready');
 });
